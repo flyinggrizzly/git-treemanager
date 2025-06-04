@@ -24,35 +24,30 @@ struct Cli {
 }
 
 fn main() {
-  std::process::exit(manage_worktree().map_or_else(
-    |err| {
-      eprintln!("Error: {}", err);
-      err.code()
-    },
-    std::convert::identity,
-  ));
-}
-
-fn manage_worktree() -> Result<i32, GitTreeManagerError> {
-  let lookup = Repository::open_from_env();
-  if lookup.is_err() {
-    return Err(GitTreeManagerError::MissingRepository);
-  };
-
-  let repo = lookup.unwrap();
-
   let cli = Cli::parse();
 
-  normalize_subcommand(cli.subcommand.as_str())
-    .and_then(|subcommand| perform_subcommand(subcommand, cli, repo))
+  let exit_code = get_repo()
+    .and_then(|repo| get_subcommand(cli.subcommand.as_str()).map(|subcommand| (repo, subcommand)))
+    .and_then(|(repo, subcommand)| perform_subcommand(subcommand, cli, repo))
     .map(|_| 0)
+    .map_err(|err| {
+      eprintln!("Error: {}", err);
+      err.code()
+    })
+    .unwrap();
+
+  std::process::exit(exit_code)
+}
+
+fn get_repo() -> Result<Repository, GitTreeManagerError> {
+  Repository::open_from_env().map_err(|_| GitTreeManagerError::MissingRepository)
 }
 
 enum Subcommand {
   Create,
 }
 
-fn normalize_subcommand(subcommand: &str) -> Result<Subcommand, GitTreeManagerError> {
+fn get_subcommand(subcommand: &str) -> Result<Subcommand, GitTreeManagerError> {
   match subcommand {
     "create" => Ok(Subcommand::Create),
     "c" => Ok(Subcommand::Create),
