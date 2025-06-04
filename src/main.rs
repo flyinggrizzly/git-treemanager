@@ -18,13 +18,6 @@ struct Cli {
 
     #[arg(short = 'b', help = "Create a new branch")]
     new_branch: bool,
-
-    #[arg(
-        short = 'p',
-        long = "parent",
-        help = "Parent directory for the worktree. Defaults to $HOME/worktrees/"
-    )]
-    parent: Option<PathBuf>,
 }
 
 fn main() -> Result<(), GitTreeManagerError> {
@@ -41,7 +34,6 @@ fn main() -> Result<(), GitTreeManagerError> {
     } else {
         "extant-branch"
     };
-    let parent = cli.parent.or(get_default_worktree_location().ok()).unwrap();
     let valid_basic_input = if validate_branch_args(branch, repo, cli.new_branch).is_ok() {
         "good to go"
     } else {
@@ -50,7 +42,6 @@ fn main() -> Result<(), GitTreeManagerError> {
 
     println!("Branch: {}", branch);
     println!("New Branch: {}", new_branch);
-    println!("Parent Directory: {:?}", parent);
     println!("Input ready: {}", valid_basic_input);
     Ok(())
 }
