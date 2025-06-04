@@ -7,6 +7,9 @@ pub enum GitTreeManagerError {
   UncreatedBranch(String),
   AlreadyCreatedBranch(String),
   UnknownSubcommand(String),
+  UnspecifiedBranch,
+  Git2Error(git2::Error),
+  FsError(String),
 }
 
 impl fmt::Display for GitTreeManagerError {
@@ -35,6 +38,15 @@ impl fmt::Display for GitTreeManagerError {
           subcommand
         )
       }
+      GitTreeManagerError::UnspecifiedBranch => {
+        write!(formatter, "No branch specified.")
+      }
+      GitTreeManagerError::Git2Error(git2_error) => {
+        write!(formatter, "Git error: {}", git2_error)
+      }
+      GitTreeManagerError::FsError(message) => {
+        write!(formatter, "File system error: {}", message)
+      }
     }
   }
 }
@@ -49,6 +61,9 @@ impl GitTreeManagerError {
       GitTreeManagerError::UncreatedBranch(_) => 3,
       GitTreeManagerError::AlreadyCreatedBranch(_) => 4,
       GitTreeManagerError::UnknownSubcommand(_) => 5,
+      GitTreeManagerError::UnspecifiedBranch => 6,
+      GitTreeManagerError::Git2Error(_) => 7,
+      GitTreeManagerError::FsError(_) => 8,
     }
   }
 }
