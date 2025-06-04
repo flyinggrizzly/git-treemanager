@@ -31,7 +31,7 @@ fn main() -> Result<(), GitTreeManagerError> {
     let cli = Cli::parse();
 
     let lookup = Repository::open_from_env();
-    if lookup.is_err() { return Err(GitTreeManagerError::MissingRepositoryError); };
+    if lookup.is_err() { return Err(GitTreeManagerError::MissingRepository); };
 
     let repo = lookup.unwrap();
 
@@ -64,13 +64,13 @@ fn validate_branch_args(
     let remote_branch = repo.find_branch(branch, git2::BranchType::Remote);
 
     match (create_branch, local_branch, remote_branch) {
-        (true, Ok(_), _) => Err(GitTreeManagerError::AlreadyCreatedBranchError(
+        (true, Ok(_), _) => Err(GitTreeManagerError::AlreadyCreatedBranch(
             branch.to_string(),
         )),
-        (true, _, Ok(_)) => Err(GitTreeManagerError::AlreadyCreatedBranchError(
+        (true, _, Ok(_)) => Err(GitTreeManagerError::AlreadyCreatedBranch(
             branch.to_string(),
         )),
-        (false, Err(_), Err(_)) => Err(GitTreeManagerError::UncreatedBranchError(
+        (false, Err(_), Err(_)) => Err(GitTreeManagerError::UncreatedBranch(
             branch.to_string(),
         )),
         _ => Ok(()),
@@ -80,6 +80,6 @@ fn validate_branch_args(
 fn get_default_worktree_location() -> Result<PathBuf, GitTreeManagerError> {
     match std::env::var("HOME") {
         Ok(home) => Ok(PathBuf::from(home).join("worktrees")),
-        Err(_) => Err(GitTreeManagerError::MissingHomeError),
+        Err(_) => Err(GitTreeManagerError::MissingHomeEnvVar),
     }
 }
