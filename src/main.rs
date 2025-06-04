@@ -13,6 +13,9 @@ use error::GitTreeManagerError;
     version = env!("CARGO_PKG_VERSION"),
 )]
 struct Cli {
+    #[arg(help = "Subcommand to run", index = 1)]
+    subcommand: String,
+
     #[arg(help = "Branch name")]
     branch: Option<String>,
 
@@ -20,52 +23,55 @@ struct Cli {
     new_branch: bool,
 }
 
-fn main() -> Result<(), GitTreeManagerError> {
-    let cli = Cli::parse();
+fn main() {
+    std::process::exit(manage_worktree().map_or_else(
+        |err| {
+            eprintln!("Error: {}", err);
+            err.code()
+        },
+        std::convert::identity,
+    ));
+}
 
+fn manage_worktree() -> Result<i32, GitTreeManagerError> {
     let lookup = Repository::open_from_env();
-    if lookup.is_err() { return Err(GitTreeManagerError::MissingRepository); };
+    if lookup.is_err() {
+        return Err(GitTreeManagerError::MissingRepository);
+    };
 
     let repo = lookup.unwrap();
 
-    let branch = cli.branch.as_deref().unwrap();
-    let new_branch = if cli.new_branch {
-        "new-branch"
-    } else {
-        "extant-branch"
-    };
-    let valid_basic_input = if validate_branch_args(branch, repo, cli.new_branch).is_ok() {
-        "good to go"
-    } else {
-        "bad input"
-    };
+    let cli = Cli::parse();
 
-    println!("Branch: {}", branch);
-    println!("New Branch: {}", new_branch);
-    println!("Input ready: {}", valid_basic_input);
-    Ok(())
+    normalize_subcommand(cli.subcommand.as_str())
+        .and_then(|subcommand| perform_subcommand(subcommand, cli, repo))
+        .map(|_| 0)
 }
 
-fn validate_branch_args(
-    branch: &str,
-    repo: Repository,
-    create_branch: bool,
-) -> Result<(), GitTreeManagerError> {
-    let local_branch = repo.find_branch(branch, git2::BranchType::Local);
-    let remote_branch = repo.find_branch(branch, git2::BranchType::Remote);
+enum Subcommand {
+    Create,
+}
 
-    match (create_branch, local_branch, remote_branch) {
-        (true, Ok(_), _) => Err(GitTreeManagerError::AlreadyCreatedBranch(
-            branch.to_string(),
-        )),
-        (true, _, Ok(_)) => Err(GitTreeManagerError::AlreadyCreatedBranch(
-            branch.to_string(),
-        )),
-        (false, Err(_), Err(_)) => Err(GitTreeManagerError::UncreatedBranch(
-            branch.to_string(),
-        )),
-        _ => Ok(()),
+fn normalize_subcommand(subcommand: &str) -> Result<Subcommand, GitTreeManagerError> {
+    match subcommand {
+        "create" => Ok(Subcommand::Create),
+        "c" => Ok(Subcommand::Create),
+        _ => Err(GitTreeManagerError::UnknownSubcommand(subcommand.into())),
     }
+}
+
+fn perform_subcommand(
+    subcommand: Subcommand,
+    cli: Cli,
+    repo: Repository,
+) -> Result<(), GitTreeManagerError> {
+    match subcommand {
+        Subcommand::Create => perform_create(cli, repo),
+    }
+}
+
+fn perform_create(cli: Cli, repo: Repository) -> Result<(), GitTreeManagerError> {
+    Ok(())
 }
 
 fn get_default_worktree_location() -> Result<PathBuf, GitTreeManagerError> {
